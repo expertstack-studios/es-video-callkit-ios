@@ -8,9 +8,9 @@ The SDK ships as a prebuilt XCFramework. Its video engine (Vonage / OpenTok) is 
 
 | Item | Minimum |
 | --- | --- |
-| iOS | 15.6 |
-| Swift tools | 5.9 |
-| Xcode | 15 or later |
+| iOS | 17.6 |
+| Swift tools | 6.1 |
+| Xcode | 27 or later |
 
 ## Installation
 
@@ -294,3 +294,24 @@ VideoCall.createCallButton(content: {
 ## Support
 
 For a client secret, a `Config.dat`, or help with integration, contact Expertstack.
+
+## Phase 2 interactions (BODI Mobile)
+
+For an app that signs in to the BODI API itself (session cookie `__Host-bodi_sid`, no client secret). Phase 1 (`initialize(clientSecret)`, `createCallButton`) is unchanged for AEI and the current BODI app.
+
+```swift
+VideoCall.configure(VideoCallConfiguration(apiBaseURL: url, client: "bodi-ios", clientVersion: "1.0.0", deviceId: installId))
+VideoCall.phase2Delegate = self                 // VideoCallDelegate: waiting, connecting, connected, onHold, ended, failed
+VideoCall.setHoldView { MyHoldView() }          // shown over the call screen while on hold
+try await VideoCall.startInteraction(InteractionStartRequest(siteId: siteId, answers: answers))
+await VideoCall.leaveCall()                     // BODI-07 while waiting, BODI-09 once connected
+```
+
+- `Phase2/InteractionAPIClient.swift`: INT-01, BODI-06 to BODI-09 and RT-02 on `/v1/...`, with `X-Client`, `X-Client-Version`, `X-Request-Id` and `Idempotency-Key`; errors as `InteractionError` (the API's `code` and `message`).
+- `Phase2/RealtimeClient.swift`: RT-02 ticket, then the WebSocket; ping every 5 minutes; reconnect after 1, 2, 5, 10, 30 s; `interaction.answered`, `interaction.on_hold`, `interaction.ended`, `session.ended`.
+- `Phase2/InteractionEngine.swift`: start, wait (WebSocket, BODI-06 polling as the fallback), join the video only on answer (refreshing the token with BODI-08 when under 5 minutes are left), hold (camera and microphone off), end.
+- `Phase2/LiveCallVideoBridge.swift`: runs it on the existing `Call`, CallKit, call screen and Vonage session. Phase 2 connection data (`role=agent;par=…`) marks the interpreter.
+
+- Vonage Video comes from `github.com/Vonage/vonage-video-client-sdk-swift` (2.36.0; the old `opentok/vonage-client-sdk-video` package is read-only at 2.31.1). The module is still `OpenTok`. It needs iOS 17, so VideoCallKit's deployment target is iOS 17.6.
+- Testing on a device: stop Xcode Device Hub screen sharing first. While it mirrors the phone, apps get black camera frames, so the outgoing video and self-view are black.
+- Tests: the `VideoCallKitTests` scheme (`xcodebuild -workspace VideoCall.xcworkspace -scheme VideoCallKitTests test`). The test target imports the SDK with `@testable import VideoCallKit`; it doesn't compile SDK sources itself.
