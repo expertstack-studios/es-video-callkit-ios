@@ -15,8 +15,8 @@ let package = Package(
     targets: [
         .binaryTarget(
             name: "VideoCallKit",
-            url: "https://github.com/expertstack-studios/es-video-callkit-ios/releases/download/1.0.0-rc.7/VideoCallKit.xcframework.zip",
-            checksum: "0b32840db6c4f75cbeff3232eea8c67376f1e242ff3d60ad696222f840d1104e"
+            url: "https://github.com/expertstack-studios/es-video-callkit-ios/releases/download/1.0.0-rc.8/VideoCallKit.xcframework.zip",
+            checksum: "dddb4cfaece9a0ab86260893f074eb37e5458d4b321f533944bd01875e15d1c2"
         )
     ]
 )
